@@ -1,0 +1,64 @@
+import pyautogui
+import numpy as np
+import cv2
+import keyboard  # Import the keyboard library
+import time
+
+running = False  # Flag to control the aimbot state
+
+# Function to toggle aimbot
+def toggle_aimbot():
+    global running
+    running = not running  # Toggle the state
+    if running:
+        print("Aimbot started.")
+    else:
+        print("Aimbot stopped.")
+
+# Set up the hotkey for starting/stopping the aimbot
+keyboard.add_hotkey('insert', toggle_aimbot)
+
+while True:
+    if running:  # Only run the aimbot if it's active
+        # Take a screenshot of the screen
+        screenshot = pyautogui.screenshot()
+
+        # Convert the screenshot to a numpy array
+        screenshot_array = np.array(screenshot)
+
+        # Convert the color space from RGB to BGR (OpenCV uses BGR format)
+        screenshot_array = cv2.cvtColor(screenshot_array, cv2.COLOR_RGB2BGR)
+
+        # Convert the color space from BGR to HSV
+        hsv = cv2.cvtColor(screenshot_array, cv2.COLOR_BGR2HSV)
+
+        # Define the lower and upper bounds for red color in HSV
+        lower_red1 = np.array([0, 100, 100])
+        upper_red1 = np.array([10, 255, 255])
+        lower_red2 = np.array([160, 100, 100])
+        upper_red2 = np.array([180, 255, 255])
+
+        # Create masks for red color
+        mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
+        mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
+        mask = mask1 | mask2  # Combine the masks
+
+        # Find contours in the mask
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        if contours:  # Check if any contours were found
+            # Find the contour with the largest area
+            largest_contour = max(contours, key=cv2.contourArea)
+
+            # Find the center of the largest contour
+            M = cv2.moments(largest_contour)
+            if M['m00'] != 0:  # Prevent division by zero
+                cx = int(M['m10'] / M['m00'])
+                cy = int(M['m01'] / M['m00'])
+
+                # Move the mouse cursor to the center of the red circular area
+                pyautogui.moveTo(cx, cy, duration=0.1)  # Added duration for smoother movement
+        else:
+            print("No red contour found.")
+
+    time.sleep(0.1)  # Sleep briefly to avoid high CPU usage
